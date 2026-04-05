@@ -5,11 +5,14 @@
 칸 크기(mm)로 ‘픽셀 개수’와 ‘인쇄 가독성’을 맞춥니다. 값을 줄이면 그리드가 촘촘해져 그림이 더 잘 보이고,
 키우면 칸·글자가 커져 색칠하기 쉽습니다. PNG 알파(투명)가 있으면 전경의 바깥쪽 한 겹(누끼 외곽) 칸은
 표·CSV에서 레벨 0(4단계면 이진 00)으로 맞춥니다.
+
+일괄: --batch (또는 --images-dir 폴더)로 여러 이미지를 worksheets/ 등에 한 번에 생성.
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -24,6 +27,8 @@ from quantize_3level import (
     parse_thresholds,
     rgb_for_level,
 )
+
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp"}
 
 
 def composite_rgba(img: Image.Image, bg: str) -> Image.Image:
@@ -257,6 +262,115 @@ def draw_page(
         )
 
 
+def list_images_in_dir(folder: Path) -> list[Path]:
+    if not folder.is_dir():
+        raise FileNotFoundError(f"폴더가 없습니다: {folder}")
+    out = [
+        p
+        for p in folder.iterdir()
+        if p.is_file() and p.suffix.lower() in _IMAGE_SUFFIXES
+    ]
+    return sorted(out, key=lambda x: x.name.lower())
+
+
+def process_one_image(
+    args: argparse.Namespace,
+    *,
+    input_path: Path,
+    output_pdf: Path,
+    csv_path: Path | None = None,
+    key_output_override: Path | None = None,
+    quiet: bool = False,
+) -> None:
+    """한 장의 이미지로 학생용/정답 PDF·CSV 생성."""
+    output_pdf.parent.mkdir(parents=True, exist_ok=True)
+
+    img = Image.open(input_path).convert("RGBA")
+    src_w, src_h = img.size
+    rgb_full = composite_rgba(img, args.bg)
+
+    content_w_mm = 210.0 - 2 * args.margin_x_mm
+    content_h_mm = 297.0 - args.title_top_mm - args.legend_bottom_mm
+    cols, rows = fit_grid_size(
+        src_w, src_h, content_w_mm, content_h_mm, args.min_cell_mm
+    )
+    small = rgb_full.resize((cols, rows), Image.Resampling.NEAREST)
+
+    thresholds = parse_thresholds(args.thresholds, args.levels)
+    grid = build_level_grid(small, args.levels, thresholds)
+
+    alpha_min, _alpha_max = img.split()[3].getextrema()
+    if (not args.no_outline_00) and alpha_min < 250:
+        fg_for_outline = build_fg_mask_rgba(img, cols, rows)
+        apply_rgba_outline_as_level_zero(grid, fg_for_outline)
+
+    csv_out = csv_path if csv_path is not None else output_pdf.with_suffix(".csv")
+
+    import csv as csv_mod
+
+    with csv_out.open("w", newline="", encoding="utf-8-sig") as f:
+        csv_writer = csv_mod.writer(f, quoting=csv_mod.QUOTE_MINIMAL)
+        csv_writer.writerow([f"c{x}" for x in range(cols)])
+        for row in grid:
+            csv_writer.writerow([binary_for_level(v, args.levels) for v in row])
+
+    a4_in = (210.0 / 25.4, 297.0 / 25.4)
+    fig = plt.figure(figsize=a4_in)
+
+    page_title = input_path.name
+
+    if args.student_only:
+        key_path: Path | None = None
+    elif key_output_override is not None:
+        key_path = key_output_override
+    else:
+        key_path = output_pdf.with_name(output_pdf.stem + "_key" + output_pdf.suffix)
+
+    if not args.key_only:
+        with PdfPages(output_pdf) as pdf:
+            draw_page(
+                fig,
+                grid,
+                levels=args.levels,
+                title=page_title,
+                student_mode=True,
+                line_width=args.line_width,
+            )
+            pdf.savefig(fig, dpi=300)
+
+    if not args.student_only and key_path is not None:
+        key_path.parent.mkdir(parents=True, exist_ok=True)
+        with PdfPages(key_path) as pdf:
+            draw_page(
+                fig,
+                grid,
+                levels=args.levels,
+                title=page_title,
+                student_mode=False,
+                line_width=args.line_width,
+            )
+            pdf.savefig(fig, dpi=300)
+
+    plt.close(fig)
+
+    cell_w_mm = content_w_mm / cols
+    cell_h_mm = content_h_mm / rows
+    if not quiet:
+        if not args.key_only:
+            print(f"학생용 PDF: {output_pdf.resolve()}")
+        if not args.student_only and key_path is not None:
+            print(f"정답 PDF: {key_path.resolve()}")
+        print(f"격자 CSV: {csv_out.resolve()} (축소 후 {cols}×{rows}, 셀=2진 문자열)")
+        print(
+            f"칸 크기(약): {cell_w_mm:.2f}mm × {cell_h_mm:.2f}mm "
+            f"(내용 영역 {content_w_mm:.0f}×{content_h_mm:.0f}mm)"
+        )
+        if cell_w_mm < 4.3 or cell_h_mm < 4.3:
+            print(
+                "※ 칸/글자가 매우 작을 수 있습니다. --min-cell-mm 을 6.5~8 정도로 키워 보세요."
+            )
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="A4 픽셀 격자 색칠 활동지 PDF")
     p.add_argument("-i", "--input", type=Path, default=Path("001.png"))
@@ -328,6 +442,23 @@ def main() -> None:
         action="store_true",
         help="알파 기준 누끼 외곽 칸을 레벨 0(00)으로 강제하지 않음",
     )
+    p.add_argument(
+        "--batch",
+        action="store_true",
+        help="./images 폴더 안 이미지 전부 일괄 생성 (--images-dir 로 다른 폴더 지정 가능)",
+    )
+    p.add_argument(
+        "--images-dir",
+        type=Path,
+        default=None,
+        help="이 폴더 안 이미지 전부 워크시트로 생성 (-i/-o/-k/--csv-grid 는 일괄에서 무시). --batch 단독이면 기본값 images",
+    )
+    p.add_argument(
+        "--batch-output-dir",
+        type=Path,
+        default=Path("worksheets"),
+        help="--images-dir 일괄 생성 시 PDF·CSV를 넣을 폴더 (기본: worksheets)",
+    )
     args = p.parse_args()
 
     setup_korean_font()
@@ -335,91 +466,54 @@ def main() -> None:
     if args.student_only and args.key_only:
         raise SystemExit("--student-only 와 --key-only 는 동시에 쓸 수 없습니다.")
 
-    img = Image.open(args.input).convert("RGBA")
-    src_w, src_h = img.size
-    rgb_full = composite_rgba(img, args.bg)
+    batch_folder = args.images_dir
+    if args.batch:
+        batch_folder = batch_folder or Path("images")
 
-    content_w_mm = 210.0 - 2 * args.margin_x_mm
-    content_h_mm = 297.0 - args.title_top_mm - args.legend_bottom_mm
-    cols, rows = fit_grid_size(
-        src_w, src_h, content_w_mm, content_h_mm, args.min_cell_mm
-    )
-    small = rgb_full.resize((cols, rows), Image.Resampling.NEAREST)
-
-    thresholds = parse_thresholds(args.thresholds, args.levels)
-    grid = build_level_grid(small, args.levels, thresholds)
-
-    alpha_min, _alpha_max = img.split()[3].getextrema()
-    if (not args.no_outline_00) and alpha_min < 250:
-        fg_for_outline = build_fg_mask_rgba(img, cols, rows)
-        apply_rgba_outline_as_level_zero(grid, fg_for_outline)
-
-    csv_path = args.csv_grid
-    if csv_path is None:
-        csv_path = args.output.with_suffix(".csv")
-
-    import csv as csv_mod
-
-    with csv_path.open("w", newline="", encoding="utf-8-sig") as f:
-        csv_writer = csv_mod.writer(f, quoting=csv_mod.QUOTE_MINIMAL)
-        csv_writer.writerow([f"c{x}" for x in range(cols)])
-        for row in grid:
-            csv_writer.writerow([binary_for_level(v, args.levels) for v in row])
-
-    a4_in = (210.0 / 25.4, 297.0 / 25.4)
-    fig = plt.figure(figsize=a4_in)
-
-    page_title = args.input.name
-
-    key_path: Path | None = None
-    if not args.student_only:
-        key_path = (
-            args.key_output
-            if args.key_output is not None
-            else args.output.with_name(args.output.stem + "_key" + args.output.suffix)
-        )
-
-    if not args.key_only:
-        with PdfPages(args.output) as pdf:
-            draw_page(
-                fig,
-                grid,
-                levels=args.levels,
-                title=page_title,
-                student_mode=True,
-                line_width=args.line_width,
+    if batch_folder is not None:
+        if args.csv_grid is not None or args.key_output is not None:
+            print(
+                "※ 일괄 모드: --csv-grid, --key-output 은 무시하고 파일명 규칙으로 저장합니다.",
+                file=sys.stderr,
             )
-            pdf.savefig(fig, dpi=300)
-
-    if not args.student_only and key_path is not None:
-        with PdfPages(key_path) as pdf:
-            draw_page(
-                fig,
-                grid,
-                levels=args.levels,
-                title=page_title,
-                student_mode=False,
-                line_width=args.line_width,
+        try:
+            images = list_images_in_dir(batch_folder.resolve())
+        except FileNotFoundError as e:
+            raise SystemExit(str(e)) from e
+        if not images:
+            raise SystemExit(
+                f"이미지가 없습니다 ({', '.join(sorted(_IMAGE_SUFFIXES))}): {batch_folder}"
             )
-            pdf.savefig(fig, dpi=300)
-
-    plt.close(fig)
-
-    cell_w_mm = content_w_mm / cols
-    cell_h_mm = content_h_mm / rows
-    if not args.key_only:
-        print(f"학생용 PDF: {args.output.resolve()}")
-    if not args.student_only and key_path is not None:
-        print(f"정답 PDF: {key_path.resolve()}")
-    print(f"격자 CSV: {csv_path.resolve()} (축소 후 {cols}×{rows}, 셀=2진 문자열)")
-    print(
-        f"칸 크기(약): {cell_w_mm:.2f}mm × {cell_h_mm:.2f}mm "
-        f"(내용 영역 {content_w_mm:.0f}×{content_h_mm:.0f}mm)"
-    )
-    if cell_w_mm < 4.3 or cell_h_mm < 4.3:
+        args.batch_output_dir.mkdir(parents=True, exist_ok=True)
         print(
-            "※ 칸/글자가 매우 작을 수 있습니다. --min-cell-mm 을 6.5~8 정도로 키워 보세요."
+            f"일괄 생성 {len(images)}개 → {args.batch_output_dir.resolve()}",
+            file=sys.stderr,
         )
+        for idx, img_path in enumerate(images):
+            stem = img_path.stem
+            out_pdf = args.batch_output_dir / f"{stem}_worksheet_a4.pdf"
+            csv_p = args.batch_output_dir / f"{stem}_worksheet_a4.csv"
+            if idx:
+                print("", file=sys.stderr)
+            print(f"[{idx + 1}/{len(images)}] {img_path.name}", file=sys.stderr)
+            process_one_image(
+                args,
+                input_path=img_path,
+                output_pdf=out_pdf,
+                csv_path=csv_p,
+                key_output_override=None,
+                quiet=False,
+            )
+        return
+
+    process_one_image(
+        args,
+        input_path=args.input,
+        output_pdf=args.output,
+        csv_path=args.csv_grid,
+        key_output_override=args.key_output,
+        quiet=False,
+    )
 
 
 if __name__ == "__main__":
