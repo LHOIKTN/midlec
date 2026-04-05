@@ -1,0 +1,1198 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>강의 슬라이드</title>
+        <style>
+            :root {
+                --bg: #0f1419;
+                --fg: #e7ecf1;
+                --muted: #8b98a5;
+                --accent: #1d9bf0;
+                --slide-padding: clamp(2rem, 5vw, 4rem);
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            html,
+            body {
+                height: 100%;
+                overflow: hidden;
+                font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+                background: var(--bg);
+                color: var(--fg);
+            }
+
+            .deck {
+                height: 100%;
+                position: relative;
+            }
+
+            .slide {
+                position: absolute;
+                inset: 0;
+                display: none;
+                flex-direction: column;
+                justify-content: center;
+                padding: var(--slide-padding);
+                max-width: 56rem;
+                margin: 0 auto;
+            }
+
+            .slide.active {
+                display: flex;
+            }
+
+            .slide h1 {
+                font-size: clamp(1.75rem, 4vw, 2.75rem);
+                font-weight: 700;
+                line-height: 1.2;
+                margin-bottom: 1rem;
+            }
+
+            .slide h2 {
+                font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+                font-weight: 600;
+                color: var(--muted);
+                margin-bottom: 1.5rem;
+            }
+
+            .slide h3 {
+                font-size: clamp(1.05rem, 2vw, 1.2rem);
+                font-weight: 600;
+                color: var(--fg);
+                margin-top: 1.25rem;
+                margin-bottom: 0.4rem;
+            }
+
+            .slide h3:first-of-type {
+                margin-top: 0.75rem;
+            }
+
+            .slide p,
+            .slide li {
+                font-size: clamp(1rem, 2vw, 1.25rem);
+                line-height: 1.65;
+                color: var(--fg);
+            }
+
+            .slide ul {
+                margin-top: 0.75rem;
+                padding-left: 1.25rem;
+            }
+
+            .slide li + li {
+                margin-top: 0.5rem;
+            }
+
+            .slide-emphasis {
+                font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+                line-height: 1.7;
+                font-weight: 500;
+                color: var(--fg);
+                border-left: 4px solid var(--accent);
+                padding-left: 1.25rem;
+                margin-top: 0.5rem;
+            }
+
+            .slide table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: clamp(0.95rem, 1.85vw, 1.15rem);
+                line-height: 1.55;
+                margin-top: 0.5rem;
+            }
+
+            .slide th,
+            .slide td {
+                border: 1px solid rgba(231, 236, 241, 0.2);
+                padding: 0.75rem 1rem;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .slide thead th {
+                background: rgba(29, 155, 240, 0.15);
+                color: var(--fg);
+                font-weight: 600;
+            }
+
+            .slide tbody th {
+                width: 28%;
+                min-width: 9rem;
+                background: rgba(231, 236, 241, 0.06);
+                font-weight: 600;
+                color: var(--fg);
+            }
+
+            .slide.morse-slide {
+                justify-content: flex-start;
+                overflow-y: auto;
+                padding-top: clamp(1rem, 2.5vh, 1.5rem);
+            }
+
+            .slide.morse-slide h1 {
+                margin-bottom: 0.35rem;
+            }
+
+            .slide.morse-slide h2 {
+                margin-bottom: 0.45rem;
+                font-size: clamp(1rem, 2.1vw, 1.35rem);
+            }
+
+            table.morse-code {
+                font-size: clamp(0.95rem, 2vw, 1.2rem);
+                line-height: 1.28;
+                margin-top: 0.15rem;
+            }
+
+            table.morse-code th,
+            table.morse-code td {
+                padding: 0.14rem 0.28rem;
+            }
+
+            table.morse-code tbody th {
+                width: auto;
+                min-width: 1.65rem;
+                text-align: center;
+            }
+
+            table.morse-code td.morse-cell {
+                font-family: inherit;
+                letter-spacing: 0;
+                vertical-align: middle;
+            }
+
+            table.morse-code .morse-pattern {
+                display: inline-flex;
+                flex-wrap: nowrap;
+                align-items: center;
+                gap: 0.14rem;
+            }
+
+            table.morse-code .morse-pattern .morse-dit {
+                width: clamp(0.26rem, 0.6vw, 0.36rem);
+                height: clamp(0.26rem, 0.6vw, 0.36rem);
+                border-radius: 50%;
+                background: var(--accent);
+                flex-shrink: 0;
+            }
+
+            table.morse-code .morse-pattern .morse-dah {
+                width: clamp(0.68rem, 1.6vw, 0.92rem);
+                height: clamp(0.26rem, 0.6vw, 0.36rem);
+                border-radius: 2px;
+                background: var(--fg);
+                flex-shrink: 0;
+            }
+
+            .slide.dash-slide {
+                justify-content: flex-start;
+                overflow-y: auto;
+                padding-top: clamp(1rem, 2.5vh, 1.5rem);
+            }
+
+            .slide.dash-slide h1 {
+                margin-bottom: 0.35rem;
+            }
+
+            .slide.dash-slide h2 {
+                margin-bottom: 0.45rem;
+                font-size: clamp(1rem, 2.1vw, 1.35rem);
+            }
+
+            table.dash-alpha-table {
+                font-size: clamp(0.9rem, 1.85vw, 1.15rem);
+                line-height: 1.28;
+                margin-top: 0.15rem;
+                table-layout: fixed;
+            }
+
+            table.dash-alpha-table th,
+            table.dash-alpha-table td {
+                padding: 0.14rem 0.28rem;
+            }
+
+            table.dash-alpha-table tbody th {
+                width: auto;
+                min-width: 1.65rem;
+                text-align: center;
+            }
+
+            table.dash-alpha-table td:nth-child(2),
+            table.dash-alpha-table td:nth-child(4) {
+                width: 36%;
+                vertical-align: middle;
+            }
+
+            .dash-bar-track {
+                display: block;
+                width: 100%;
+                height: clamp(0.4rem, 1.1vw, 0.65rem);
+                background: rgba(231, 236, 241, 0.1);
+                border-radius: 999px;
+                overflow: hidden;
+            }
+
+            .dash-bar {
+                display: block;
+                height: 100%;
+                width: calc(100% * var(--u) / 26);
+                min-width: 2px;
+                background: linear-gradient(90deg, var(--accent), #6ec9ff);
+                border-radius: 999px;
+                box-shadow: 0 0 0 1px rgba(29, 155, 240, 0.25);
+            }
+
+            .slide.sos-compare-slide {
+                justify-content: flex-start;
+                overflow-y: auto;
+                padding-top: clamp(1rem, 2.5vh, 1.5rem);
+            }
+
+            .slide.sos-compare-slide h1 {
+                margin-bottom: 0.35rem;
+            }
+
+            .slide.sos-compare-slide > h2 {
+                margin-bottom: 1rem;
+                font-size: clamp(1rem, 2vw, 1.3rem);
+            }
+
+            .sos-compare-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: clamp(1rem, 2.5vw, 1.75rem);
+                align-items: stretch;
+                width: 100%;
+            }
+
+            @media (max-width: 720px) {
+                .sos-compare-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .sos-compare-panel {
+                border: 1px solid rgba(231, 236, 241, 0.18);
+                border-radius: 10px;
+                padding: 1rem 1.1rem;
+                background: rgba(231, 236, 241, 0.04);
+            }
+
+            .sos-compare-panel h3 {
+                font-size: clamp(1.02rem, 2vw, 1.2rem);
+                margin-bottom: 0.9rem;
+                color: var(--fg);
+                font-weight: 600;
+            }
+
+            .sos-compare-panel .sub {
+                display: block;
+                font-size: 0.88em;
+                font-weight: 500;
+                color: var(--muted);
+                margin-top: 0.2rem;
+            }
+
+            .morse-sos-visual {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: flex-end;
+                justify-content: center;
+                gap: 1rem 1.35rem;
+                padding: 0.35rem 0 0.25rem;
+            }
+
+            .morse-sos-letter-group {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .morse-sos-letter-group .sym {
+                font-weight: 700;
+                font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+            }
+
+            .morse-sos-tones {
+                display: inline-flex;
+                gap: 0.28rem;
+                align-items: center;
+            }
+
+            .morse-dit {
+                width: clamp(0.38rem, 1vw, 0.48rem);
+                height: clamp(0.38rem, 1vw, 0.48rem);
+                border-radius: 50%;
+                background: var(--accent);
+                flex-shrink: 0;
+            }
+
+            .morse-dah {
+                width: clamp(1rem, 2.4vw, 1.25rem);
+                height: clamp(0.38rem, 1vw, 0.48rem);
+                border-radius: 3px;
+                background: var(--fg);
+                flex-shrink: 0;
+            }
+
+            .sos-bars-stack {
+                display: flex;
+                flex-direction: column;
+                gap: 0.7rem;
+            }
+
+            .sos-bar-row {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                gap: 0.55rem;
+                align-items: center;
+            }
+
+            .sos-bar-row .dash-bar-track {
+                min-width: 0;
+            }
+
+            .sos-bar-row .sos-ord {
+                font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+                color: var(--muted);
+                font-variant-numeric: tabular-nums;
+                min-width: 2.25ch;
+                text-align: right;
+            }
+
+            .sos-bar-row .sym {
+                font-weight: 700;
+                font-size: clamp(1.05rem, 2vw, 1.25rem);
+                min-width: 1.35rem;
+            }
+
+            .slide-two-cols {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: clamp(1.25rem, 3vw, 2.5rem);
+                align-items: start;
+                width: 100%;
+                margin-top: 0.25rem;
+            }
+
+            .slide-two-cols > div {
+                padding: 0 clamp(0.5rem, 2vw, 1rem);
+            }
+
+            .slide-two-cols > div:first-child {
+                padding-left: 0;
+            }
+
+            .slide-two-cols > div:last-child {
+                padding-right: 0;
+                border-left: 1px solid rgba(231, 236, 241, 0.18);
+                padding-left: clamp(1rem, 3vw, 2rem);
+            }
+
+            .slide-two-cols h2 {
+                margin-bottom: 0.65rem;
+            }
+
+            .slide-two-cols img {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                margin-top: 0.85rem;
+                display: block;
+                border-radius: 6px;
+                background: #fff;
+                object-fit: contain;
+            }
+
+            @media (max-width: 640px) {
+                .slide-two-cols {
+                    grid-template-columns: 1fr;
+                }
+
+                .slide-two-cols > div:last-child {
+                    border-left: none;
+                    padding-left: 0;
+                    border-top: 1px solid rgba(231, 236, 241, 0.18);
+                    padding-top: 1.25rem;
+                    margin-top: 0.25rem;
+                }
+            }
+
+            .slide.ascii-slide {
+                justify-content: center;
+                overflow-y: auto;
+                padding-top: clamp(0.4rem, 1.2vh, 0.85rem);
+                padding-bottom: clamp(0.4rem, 1.2vh, 0.85rem);
+            }
+
+            .slide.ascii-slide h1 {
+                margin-bottom: 0.2rem;
+                font-size: clamp(1rem, min(2.4vw, 3.6vh), 1.45rem);
+                line-height: 1.2;
+            }
+
+            .slide.ascii-slide h2 {
+                margin-bottom: clamp(0.25rem, 1vh, 0.45rem);
+                font-size: clamp(0.68rem, min(1.35vw, 2.2vh), 0.9rem);
+                line-height: 1.35;
+                color: var(--muted);
+                font-weight: 600;
+            }
+
+            table.ascii-table.ascii-az {
+                width: min(100%, 88vw);
+                max-width: min(26rem, 88vw);
+                margin-left: auto;
+                margin-right: auto;
+                border-collapse: collapse;
+                font-size: clamp(0.52rem, min(1.05vw, 1.9vh), 0.75rem);
+                line-height: 1.12;
+                margin-top: 0.08rem;
+                table-layout: fixed;
+                border: 1px solid rgba(29, 155, 240, 0.35);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 0 0 1px rgba(231, 236, 241, 0.08);
+            }
+
+            table.ascii-table.ascii-az th,
+            table.ascii-table.ascii-az td {
+                border: 1px solid rgba(231, 236, 241, 0.14);
+                padding: clamp(0.04rem, 0.35vh, 0.12rem) clamp(0.12rem, 0.6vw, 0.28rem);
+                text-align: center;
+                vertical-align: middle;
+            }
+
+            table.ascii-table.ascii-az thead th {
+                background: rgba(29, 155, 240, 0.22);
+                color: var(--fg);
+                font-weight: 700;
+                font-size: 1em;
+                padding: clamp(0.08rem, 0.55vh, 0.18rem) clamp(0.15rem, 0.7vw, 0.35rem);
+            }
+
+            table.ascii-table.ascii-az tbody th {
+                width: 22%;
+                min-width: 0;
+                max-width: none;
+                background: rgba(231, 236, 241, 0.07);
+                font-weight: 700;
+                color: var(--muted);
+                font-variant-numeric: tabular-nums;
+                font-family: ui-monospace, Consolas, monospace;
+            }
+
+            table.ascii-table.ascii-az tbody tr:nth-child(even) td,
+            table.ascii-table.ascii-az tbody tr:nth-child(even) th {
+                background-color: rgba(29, 155, 240, 0.08);
+            }
+
+            table.ascii-table.ascii-az tbody tr:nth-child(even) th {
+                background-color: rgba(29, 155, 240, 0.11);
+            }
+
+            table.ascii-table.ascii-az td.ascii-letter {
+                width: 28%;
+                font-family: ui-monospace, Consolas, monospace;
+                font-size: 1.55em;
+                font-weight: 800;
+                line-height: 1;
+                color: var(--accent);
+                text-shadow: 0 0 12px rgba(29, 155, 240, 0.28);
+            }
+
+            .hint {
+                position: fixed;
+                bottom: 1rem;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 0.8rem;
+                color: var(--muted);
+                opacity: 0.85;
+                pointer-events: none;
+            }
+
+            .progress {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                height: 3px;
+                background: var(--accent);
+                transition: width 0.2s ease;
+            }
+
+            .counter {
+                position: fixed;
+                top: 1rem;
+                right: 1.25rem;
+                font-size: 0.875rem;
+                color: var(--muted);
+            }
+
+            .nav-hit {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                width: 18%;
+                max-width: 120px;
+                cursor: pointer;
+                z-index: 1;
+            }
+
+            .nav-hit.prev {
+                left: 0;
+            }
+            .nav-hit.next {
+                right: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="deck" id="deck" aria-live="polite">
+            <section class="slide active" aria-label="슬라이드 1: 디지털 데이터의 표현">
+                <h1>1. 디지털 데이터의 표현</h1>
+                <h2>1-1. 데이터의 이해</h2>
+                <h3>교과서 51페이지</h3>
+            </section>
+
+            <section class="slide" aria-label="슬라이드 2: 데이터와 수집 방법">
+                <h2>1. 데이터</h2>
+                <p>
+                    <strong>데이터</strong>는 숫자나 문자, 이미지, 소리, 동영상 등 다양한 형태로 표현되는 사실이나 기록
+                </p>
+                <h2>2. 데이터 수집 방법의 변화</h2>
+                <table>
+                    <tbody>
+                        <tr>
+                            <th scope="row">일상생활 데이터</th>
+                            <td>필요한 데이터를 주변에서 직접 모으고, 필요할 때 사용할 수 있도록 별도로 보관함.</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">인터넷상 데이터</th>
+                            <td>스마트폰을 이용하여 실시간 정보를 모으고, 원할 때 언제든지 꺼내 볼 수 있음.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="slide" aria-label="슬라이드 3: 아날로그와 디지털 비교">
+                <h1>아날로그와 디지털 비교</h1>
+                <div class="slide-two-cols">
+                    <div>
+                        <h2>아날로그</h2>
+                        <p>연속적인 값으로 데이터를 표현</p>
+                        <img src="images/아날로그.png" alt="아날로그 신호 예시(연속적인 파형)" />
+                    </div>
+                    <div>
+                        <h2>디지털</h2>
+                        <p>연속적인 값이 아닌 띄엄띄엄 떨어진 값을 사용하여 데이터를 표현</p>
+                        <img src="images/디지털.png" alt="디지털 신호 예시(계단형 파형)" />
+                    </div>
+                </div>
+            </section>
+            <section class="slide" aria-label="슬라이드 4: 1-2 데이터의 디지털 표현">
+                <h1>1. 디지털 데이터의 표현</h1>
+                <h2>1-2. 데이터의 디지털 표현</h2>
+                <h3>교과서 54페이지</h3>
+            </section>
+            <section class="slide" aria-label="슬라이드 5: 컴퓨팅 시스템의 디지털 데이터 표현">
+                <h2>컴퓨팅 시스템의 디지털 데이터 표현</h2>
+                <p>
+                    컴퓨팅 시스템이 디지털 데이터를 표현할 때의 기본 단위는 비트이며,<br />
+                    한 개의 비트는 0 또는 1을 표현
+                </p>
+            </section>
+            <section class="slide" aria-label="슬라이드 6: 구분 가능한 두 가지 상태">
+                <h2>중요한 건 0과 1이라는 숫자가 아니라, 구분 가능한 상태가 두 가지라는 것</h2>
+            </section>
+            <section class="slide morse-slide" aria-label="슬라이드 7: 모스부호 표">
+                <h1>모스부호</h1>
+                <h2>알파벳 A–Z (· 짧은 신호, – 긴 신호)</h2>
+                <table class="morse-code">
+                    <thead>
+                        <tr>
+                            <th scope="col">글자</th>
+                            <th scope="col">부호</th>
+                            <th scope="col">글자</th>
+                            <th scope="col">부호</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">A</th>
+                            <td class="morse-cell" aria-label="A: ·–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                            <th scope="row">N</th>
+                            <td class="morse-cell" aria-label="N: –·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">B</th>
+                            <td class="morse-cell" aria-label="B: –···">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">O</th>
+                            <td class="morse-cell" aria-label="O: –––">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                    ><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">C</th>
+                            <td class="morse-cell" aria-label="C: –·–·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">P</th>
+                            <td class="morse-cell" aria-label="P: ·––·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">D</th>
+                            <td class="morse-cell" aria-label="D: –··">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">Q</th>
+                            <td class="morse-cell" aria-label="Q: ––·–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">E</th>
+                            <td class="morse-cell" aria-label="E: ·">
+                                <span class="morse-pattern"><span class="morse-dit"></span></span>
+                            </td>
+                            <th scope="row">R</th>
+                            <td class="morse-cell" aria-label="R: ·–·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                    ><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">F</th>
+                            <td class="morse-cell" aria-label="F: ··–·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">S</th>
+                            <td class="morse-cell" aria-label="S: ···">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">G</th>
+                            <td class="morse-cell" aria-label="G: ––·">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                    ><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">T</th>
+                            <td class="morse-cell" aria-label="T: –">
+                                <span class="morse-pattern"><span class="morse-dah"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H</th>
+                            <td class="morse-cell" aria-label="H: ····">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">U</th>
+                            <td class="morse-cell" aria-label="U: ··–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">I</th>
+                            <td class="morse-cell" aria-label="I: ··">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">V</th>
+                            <td class="morse-cell" aria-label="V: ···–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">J</th>
+                            <td class="morse-cell" aria-label="J: ·–––">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                            <th scope="row">W</th>
+                            <td class="morse-cell" aria-label="W: ·––">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                    ><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">K</th>
+                            <td class="morse-cell" aria-label="K: –·–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                            <th scope="row">X</th>
+                            <td class="morse-cell" aria-label="X: –··–">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">L</th>
+                            <td class="morse-cell" aria-label="L: ·–··">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dit"></span><span class="morse-dah"></span
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                            <th scope="row">Y</th>
+                            <td class="morse-cell" aria-label="Y: –·––">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dit"></span
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">M</th>
+                            <td class="morse-cell" aria-label="M: ––">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                ></span>
+                            </td>
+                            <th scope="row">Z</th>
+                            <td class="morse-cell" aria-label="Z: ––··">
+                                <span class="morse-pattern"
+                                    ><span class="morse-dah"></span><span class="morse-dah"></span
+                                    ><span class="morse-dit"></span><span class="morse-dit"></span
+                                ></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <section class="slide dash-slide" aria-label="슬라이드 8: 알파벳과 하이픈 개수 표현">
+                <h1>신호의 길이로 알파벳 표현</h1>
+                <h2>두 가지가 아닌, 신호의 길이로 나타낸 여러 상태</h2>
+                <table class="dash-alpha-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">글자</th>
+                            <th scope="col">표현</th>
+                            <th scope="col">글자</th>
+                            <th scope="col">표현</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">A</th>
+                            <td aria-label="A, 길이 1">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 1"></span></span>
+                            </td>
+                            <th scope="row">N</th>
+                            <td aria-label="N, 길이 14">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 14"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">B</th>
+                            <td aria-label="B, 길이 2">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 2"></span></span>
+                            </td>
+                            <th scope="row">O</th>
+                            <td aria-label="O, 길이 15">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 15"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">C</th>
+                            <td aria-label="C, 길이 3">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 3"></span></span>
+                            </td>
+                            <th scope="row">P</th>
+                            <td aria-label="P, 길이 16">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 16"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">D</th>
+                            <td aria-label="D, 길이 4">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 4"></span></span>
+                            </td>
+                            <th scope="row">Q</th>
+                            <td aria-label="Q, 길이 17">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 17"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">E</th>
+                            <td aria-label="E, 길이 5">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 5"></span></span>
+                            </td>
+                            <th scope="row">R</th>
+                            <td aria-label="R, 길이 18">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 18"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">F</th>
+                            <td aria-label="F, 길이 6">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 6"></span></span>
+                            </td>
+                            <th scope="row">S</th>
+                            <td aria-label="S, 길이 19">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 19"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">G</th>
+                            <td aria-label="G, 길이 7">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 7"></span></span>
+                            </td>
+                            <th scope="row">T</th>
+                            <td aria-label="T, 길이 20">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 20"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">H</th>
+                            <td aria-label="H, 길이 8">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 8"></span></span>
+                            </td>
+                            <th scope="row">U</th>
+                            <td aria-label="U, 길이 21">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 21"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">I</th>
+                            <td aria-label="I, 길이 9">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 9"></span></span>
+                            </td>
+                            <th scope="row">V</th>
+                            <td aria-label="V, 길이 22">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 22"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">J</th>
+                            <td aria-label="J, 길이 10">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 10"></span></span>
+                            </td>
+                            <th scope="row">W</th>
+                            <td aria-label="W, 길이 23">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 23"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">K</th>
+                            <td aria-label="K, 길이 11">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 11"></span></span>
+                            </td>
+                            <th scope="row">X</th>
+                            <td aria-label="X, 길이 24">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 24"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">L</th>
+                            <td aria-label="L, 길이 12">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 12"></span></span>
+                            </td>
+                            <th scope="row">Y</th>
+                            <td aria-label="Y, 길이 25">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 25"></span></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">M</th>
+                            <td aria-label="M, 길이 13">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 13"></span></span>
+                            </td>
+                            <th scope="row">Z</th>
+                            <td aria-label="Z, 길이 26">
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 26"></span></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <section class="slide sos-compare-slide" aria-label="슬라이드 9: SOS 모스부호와 알파벳 길이 표현 비교">
+                <h1>SOS — 두 가지 표현 비교</h1>
+
+                <div class="sos-compare-grid">
+                    <div class="sos-compare-panel">
+                        <h3>
+                            모스부호 표현
+                            <span class="sub">· 짧은 신호, – 긴 신호</span>
+                        </h3>
+                        <div
+                            class="morse-sos-visual"
+                            role="img"
+                            aria-label="S는 점 세 개, O는 대시 세 개, S는 점 세 개"
+                        >
+                            <div class="morse-sos-letter-group">
+                                <span class="sym">S</span>
+                                <div class="morse-sos-tones">
+                                    <span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span>
+                                </div>
+                                <span class="sub" style="margin-top: 0">···</span>
+                            </div>
+                            <div class="morse-sos-letter-group">
+                                <span class="sym">O</span>
+                                <div class="morse-sos-tones">
+                                    <span class="morse-dah"></span><span class="morse-dah"></span
+                                    ><span class="morse-dah"></span>
+                                </div>
+                                <span class="sub" style="margin-top: 0">−−−</span>
+                            </div>
+                            <div class="morse-sos-letter-group">
+                                <span class="sym">S</span>
+                                <div class="morse-sos-tones">
+                                    <span class="morse-dit"></span><span class="morse-dit"></span
+                                    ><span class="morse-dit"></span>
+                                </div>
+                                <span class="sub" style="margin-top: 0">···</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sos-compare-panel">
+                        <h3>
+                            신호의 길이로 알파벳 표현
+                            <span class="sub">알파벳 순서(1~26)에 따른 신호 길이 </span>
+                        </h3>
+                        <div class="sos-bars-stack">
+                            <div class="sos-bar-row" aria-label="S, 순서 19">
+                                <span class="sym">S</span>
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 19"></span></span>
+                                <span class="sos-ord">19</span>
+                            </div>
+                            <div class="sos-bar-row" aria-label="O, 순서 15">
+                                <span class="sym">O</span>
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 15"></span></span>
+                                <span class="sos-ord">15</span>
+                            </div>
+                            <div class="sos-bar-row" aria-label="S, 순서 19">
+                                <span class="sym">S</span>
+                                <span class="dash-bar-track"><span class="dash-bar" style="--u: 19"></span></span>
+                                <span class="sos-ord">19</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="slide ascii-slide" aria-label="슬라이드 10: ASCII 대문자 A~Z">
+                <h1>ASCII 코드 — 대문자 A~Z</h1>
+                <h2>제어 문자는 빼고, 10진 코드 65~90과 대응하는 글자만 정리</h2>
+                <table class="ascii-table ascii-az">
+                    <thead>
+                        <tr>
+                            <th scope="col">10진</th>
+                            <th scope="col">문자</th>
+                            <th scope="col">10진</th>
+                            <th scope="col">문자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row">65</th>
+                            <td class="ascii-letter">A</td>
+                            <th scope="row">78</th>
+                            <td class="ascii-letter">N</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">66</th>
+                            <td class="ascii-letter">B</td>
+                            <th scope="row">79</th>
+                            <td class="ascii-letter">O</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">67</th>
+                            <td class="ascii-letter">C</td>
+                            <th scope="row">80</th>
+                            <td class="ascii-letter">P</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">68</th>
+                            <td class="ascii-letter">D</td>
+                            <th scope="row">81</th>
+                            <td class="ascii-letter">Q</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">69</th>
+                            <td class="ascii-letter">E</td>
+                            <th scope="row">82</th>
+                            <td class="ascii-letter">R</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">70</th>
+                            <td class="ascii-letter">F</td>
+                            <th scope="row">83</th>
+                            <td class="ascii-letter">S</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">71</th>
+                            <td class="ascii-letter">G</td>
+                            <th scope="row">84</th>
+                            <td class="ascii-letter">T</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">72</th>
+                            <td class="ascii-letter">H</td>
+                            <th scope="row">85</th>
+                            <td class="ascii-letter">U</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">73</th>
+                            <td class="ascii-letter">I</td>
+                            <th scope="row">86</th>
+                            <td class="ascii-letter">V</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">74</th>
+                            <td class="ascii-letter">J</td>
+                            <th scope="row">87</th>
+                            <td class="ascii-letter">W</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">75</th>
+                            <td class="ascii-letter">K</td>
+                            <th scope="row">88</th>
+                            <td class="ascii-letter">X</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">76</th>
+                            <td class="ascii-letter">L</td>
+                            <th scope="row">89</th>
+                            <td class="ascii-letter">Y</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">77</th>
+                            <td class="ascii-letter">M</td>
+                            <th scope="row">90</th>
+                            <td class="ascii-letter">Z</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="counter" id="counter" aria-hidden="true"></div>
+        <div
+            class="progress"
+            id="progress"
+            role="progressbar"
+            aria-valuemin="1"
+            aria-valuemax="1"
+            aria-valuenow="1"
+        ></div>
+        <p class="hint">← → 방향키 · 화면 좌우 끝 클릭으로 이동</p>
+        <button type="button" class="nav-hit prev" id="prev" aria-label="이전 슬라이드"></button>
+        <button type="button" class="nav-hit next" id="next" aria-label="다음 슬라이드"></button>
+
+        <script>
+            (function () {
+                const slides = Array.from(document.querySelectorAll(".slide"));
+                const counter = document.getElementById("counter");
+                const progress = document.getElementById("progress");
+                let i = 0;
+
+                function show(n) {
+                    i = Math.max(0, Math.min(n, slides.length - 1));
+                    slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+                    counter.textContent = i + 1 + " / " + slides.length;
+                    const pct = slides.length ? ((i + 1) / slides.length) * 100 : 0;
+                    progress.style.width = pct + "%";
+                    progress.setAttribute("aria-valuemax", String(slides.length));
+                    progress.setAttribute("aria-valuenow", String(i + 1));
+                    document.title = "강의 슬라이드 (" + (i + 1) + "/" + slides.length + ")";
+                }
+
+                function prev() {
+                    show(i - 1);
+                }
+                function next() {
+                    show(i + 1);
+                }
+
+                document.getElementById("prev").addEventListener("click", prev);
+                document.getElementById("next").addEventListener("click", next);
+
+                document.addEventListener("keydown", function (e) {
+                    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+                        e.preventDefault();
+                        next();
+                    } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+                        e.preventDefault();
+                        prev();
+                    } else if (e.key === "Home") {
+                        e.preventDefault();
+                        show(0);
+                    } else if (e.key === "End") {
+                        e.preventDefault();
+                        show(slides.length - 1);
+                    }
+                });
+
+                show(0);
+            })();
+        </script>
+    </body>
+</html>
